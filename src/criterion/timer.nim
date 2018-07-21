@@ -1,0 +1,40 @@
+when defined(windows):
+  proc QueryPerformanceCounter(res: var int64) {.
+    importc: "QueryPerformanceCounter", stdcall, dynlib: "kernel32".}
+  proc QueryPerformanceFrequency(res: var int64) {.
+    importc: "QueryPerformanceFrequency", stdcall, dynlib: "kernel32".}
+
+  var base, frequency: int64
+  QueryPerformanceCounter(base)
+  QueryPerformanceFrequency(frequency)
+  let scaleFactor = 1e9'f64 / frequency.float64
+
+  proc getMonotonicTime*(): float64 =
+    var now: int64
+    QueryPerformanceCounter(now)
+    result = (now - base).float64 * scaleFactor
+elif defined(macosx):
+  type
+    MachTimebaseInfoData {.pure, final,
+        importc: "mach_timebase_info_data_t",
+        header: "<mach/mach_time.h>".} = object
+      numer, denom: int32
+
+  proc mach_absolute_time(): int64 {.importc, header: "<mach/mach.h>".}
+  proc mach_timebase_info(info: var MachTimebaseInfoData) {.importc,
+    header: "<mach/mach_time.h>".}
+
+  var timeBaseInfo: MachTimebaseInfoData
+  mach_timebase_info(timeBaseInfo)
+
+  let scaleFactor = timeBaseInfo.numer.float64 / timeBaseInfo.denum.float64
+
+  proc getMonotonicTime*(): float64 =
+    return mach_absolute_time().float64 * scaleFactor
+else:
+  import posix
+
+  proc getMonotonicTime*(): float64 =
+    var spc: Timespec
+    assert clock_gettime(CLOCK_MONOTONIC, spc) >= 0
+    return spc.tv_sec.float64 * 1e9'f64 + spc.tv_nsec.float64
