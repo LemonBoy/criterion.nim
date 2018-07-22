@@ -5,7 +5,7 @@ import algorithm
 import sequtils
 import stats
 
-import criterion/timer
+import timer
 
 # XXX Evaluate if and how much the outliers affect the results (eg trim and
 # recalculate)
