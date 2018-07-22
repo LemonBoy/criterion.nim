@@ -164,8 +164,23 @@ proc bench*(ctx: Context, body: proc (): void): Samples =
 
   return collected
 
-proc exportCSV*(ctx: Context, path: string, data: Samples) =
-  discard
+proc exportCSV*(ctx: Context, path: string, label: string, data: Samples, append: bool = false): bool =
+  var fp: File
+
+  if not open(fp, path, [fmWrite, fmAppend][append.int]):
+    echo &"Could not write to '{path}'"
+    return false
+
+  if not append:
+    # Write the headers
+    fp.writeLine("label", ',', "iterations", ',', "elapsed time [ns]")
+
+  for sample in data:
+    fp.writeLine(label, ',', sample.iterations, ',', sample.realTime)
+
+  fp.close()
+
+  return true
 
 proc analyse*(ctx: Context, data: Samples) =
   echo &"Collected {data.len} sample(s)"
