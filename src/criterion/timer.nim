@@ -31,10 +31,12 @@ elif defined(macosx):
 
   proc getMonotonicTime*(): float64 =
     return mach_absolute_time().float64 * scaleFactor
-else:
+elif defined(posix):
   import posix
 
   proc getMonotonicTime*(): float64 =
     var spc: Timespec
     assert clock_gettime(CLOCK_MONOTONIC, spc) >= 0
     return spc.tv_sec.float64 * 1e9'f64 + spc.tv_nsec.float64
+else:
+  {.error: "Unsupported platform".}

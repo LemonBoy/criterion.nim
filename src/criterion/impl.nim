@@ -31,7 +31,7 @@ type
 
   Context = object
     cfg: Config
-    rng: Rand
+    rng: ref Rand
 
 proc formatTime(v: float64): string =
   let (unit, fact) =
@@ -62,12 +62,12 @@ iterator geometricProgression(base: int, N: int): int =
     yield v
     v *= N
 
-proc resample[T](x: openArray[T], resamples: int, est: proc (x: openArray[T]): float): seq[float] =
+proc resample[T](rng: var Rand, x: openArray[T], resamples: int, est: proc (x: openArray[T]): float): seq[float] =
   result = newSeq[float](resamples)
   var buffer = newSeq[T](x.len)
 
   for i in 0..<resamples:
-    for j in 0..buffer.high: buffer[j] = x.rand
+    for j in 0..buffer.high: buffer[j] = rng.rand(x)
     result[i] = est(buffer)
 
   sort(result, system.cmp[float])
@@ -97,9 +97,9 @@ proc fences[T:SomeReal](x: openArray[T]): (float,float,float,float) =
 
   return (lof, lif, uif, uof)
 
-proc bootstrap[T](x: openArray[T], resamples: int, est: proc (x: openArray[T]): float): Conf =
+proc bootstrap[T](rng: var Rand, x: openArray[T], resamples: int, est: proc (x: openArray[T]): float): Conf =
   let pEst = est(x)
-  let resampled = resample(x, resamples, est)
+  let resampled = resample(rng, x, resamples, est)
   let lo = percentile(resampled, 0.025) # n*0.05/2
   let hi = percentile(resampled, 0.975) # n*(1-0.05/2)
 
@@ -130,7 +130,8 @@ proc newDefaultConfig*(): Config =
 
 proc newContext*(cfg: Config): Context =
   result.cfg = cfg
-  result.rng = initRand(42424242)
+  new(result.rng)
+  result.rng[] = initRand(getMonotonicTime().int64)
 
 proc bench*(ctx: Context, body: proc (): void): Samples =
   var collected: Samples = @[]
@@ -144,7 +145,11 @@ proc bench*(ctx: Context, body: proc (): void): Samples =
     let rtBegin = getMonotonicTime()
 
     for _ in 0..<iterCount:
-      body()
+      try:
+        body()
+      except:
+        echo "The procedure raised an exception, aborting."
+        return @[]
 
     let rtFinish = getMonotonicTime()
 
@@ -178,14 +183,14 @@ proc analyse*(ctx: Context, data: Samples) =
   # Perform a linear regression on the measured realTime
   let points = data.mapIt((it.iterations.float64, it.realTime))
 
-  let slope = bootstrap(points, ctx.cfg.resamples, olsRegress)
-  let rs = bootstrap(points, ctx.cfg.resamples,
+  let slope = bootstrap(ctx.rng[], points, ctx.cfg.resamples, olsRegress)
+  let rs = bootstrap(ctx.rng[], points, ctx.cfg.resamples,
     proc (x: openArray[(float,float)]): float = rSquare(slope.val, x))
 
   # Evaluate the estimators on the averages
   let avg = data.mapIt(it.realTime / it.iterations.float64)
-  let mean = bootstrap(avg, ctx.cfg.resamples, mean)
-  let std = bootstrap(avg, ctx.cfg.resamples, standardDeviation)
+  let mean = bootstrap(ctx.rng[], avg, ctx.cfg.resamples, mean)
+  let std = bootstrap(ctx.rng[], avg, ctx.cfg.resamples, standardDeviation)
 
   if ctx.cfg.brief:
     echo &"Time:    {mean.val.formatTime} ± {std.val.formatTime}"
