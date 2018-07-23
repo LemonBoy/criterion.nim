@@ -16,7 +16,7 @@ type
     budget*: Positive
     resamples*: Positive
     brief*: bool
-    minIters*: Positive
+    minSamples*: Positive
 
 type
   Conf = object
@@ -126,7 +126,7 @@ proc rSquare[T:SomeReal](slope: T, data: openArray[(T,T)]): T =
 proc newDefaultConfig*(): Config =
   result.budget = 5
   result.resamples = 1000
-  result.minIters = 4
+  result.minSamples = 4
 
 proc newContext*(cfg: Config): Context =
   result.cfg = cfg
@@ -136,8 +136,7 @@ proc newContext*(cfg: Config): Context =
 proc bench*(ctx: Context, body: proc (): void): Samples =
   var collected: Samples = @[]
   let budget = NS_IN_S * ctx.cfg.budget.float64
-  var elapsed = 0.0
-  var iterDone = 0
+  var elapsed = 0.0'f64
 
   for iterCount in geometricProgression(1, 2):
     GC_fullCollect()
@@ -153,13 +152,13 @@ proc bench*(ctx: Context, body: proc (): void): Samples =
 
     let rtFinish = getMonotonicTime()
 
-    collected.add(Sample(iterations: iterCount, realTime: rtFinish - rtBegin))
+    let sample = Sample(iterations: iterCount, realTime: rtFinish - rtBegin)
+    collected.add(sample)
 
     elapsed += rtFinish - rtBegin
-    iterDone += iterCount
 
     # Make sure we collected enough samples to have meaningful results
-    if elapsed >= budget and iterDone >= ctx.cfg.minIters:
+    if elapsed >= budget and collected.len >= ctx.cfg.minSamples:
       break
 
   return collected
