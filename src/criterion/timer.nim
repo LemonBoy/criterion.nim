@@ -1,3 +1,6 @@
+const
+  NS_IN_S* = 1e9'f64
+
 when defined(windows):
   proc QueryPerformanceCounter(res: var int64) {.
     importc: "QueryPerformanceCounter", stdcall, dynlib: "kernel32".}
@@ -7,7 +10,7 @@ when defined(windows):
   var base, frequency: int64
   QueryPerformanceCounter(base)
   QueryPerformanceFrequency(frequency)
-  let scaleFactor = 1e9'f64 / frequency.float64
+  let scaleFactor = NS_IN_S / frequency.float64
 
   proc getMonotonicTime*(): float64 =
     var now: int64
@@ -37,6 +40,6 @@ elif defined(posix):
   proc getMonotonicTime*(): float64 =
     var spc: Timespec
     assert clock_gettime(CLOCK_MONOTONIC, spc) >= 0
-    return spc.tv_sec.float64 * 1e9'f64 + spc.tv_nsec.float64
+    return spc.tv_sec.float64 * NS_IN_S + spc.tv_nsec.float64
 else:
   {.error: "Unsupported platform".}

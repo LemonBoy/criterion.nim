@@ -135,7 +135,7 @@ proc newContext*(cfg: Config): Context =
 
 proc bench*(ctx: Context, body: proc (): void): Samples =
   var collected: Samples = @[]
-  let budget = 1e9'f64 * ctx.cfg.budget.float64
+  let budget = NS_IN_S * ctx.cfg.budget.float64
   var elapsed = 0.0
   var iterDone = 0
 
