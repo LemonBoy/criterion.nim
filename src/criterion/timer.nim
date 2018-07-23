@@ -30,7 +30,7 @@ elif defined(macosx):
   var timeBaseInfo: MachTimebaseInfoData
   mach_timebase_info(timeBaseInfo)
 
-  let scaleFactor = timeBaseInfo.numer.float64 / timeBaseInfo.denum.float64
+  let scaleFactor = timeBaseInfo.numer.float64 / timeBaseInfo.denom.float64
 
   proc getMonotonicTime*(): float64 =
     return mach_absolute_time().float64 * scaleFactor
