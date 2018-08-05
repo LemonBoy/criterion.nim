@@ -39,7 +39,7 @@ elif defined(posix):
 
   proc getMonotonicTime*(): float64 =
     var spc: Timespec
-    assert clock_gettime(CLOCK_MONOTONIC, spc) >= 0
+    discard clock_gettime(CLOCK_MONOTONIC, spc)
     return spc.tv_sec.float64 * NS_IN_S + spc.tv_nsec.float64
 else:
   {.error: "Unsupported platform".}
