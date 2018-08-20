@@ -23,7 +23,7 @@ proc dissectType(t: NimNode): int =
       result = dissectType(ty[1]) * dissectType(ty[2])
     of ntyRange:
       result = dissectType(ty[2])
-    of ntyInt:
+    of ntyInt, ntyString:
       result = 1
     of ntyTuple:
       result = ty.len - 1
