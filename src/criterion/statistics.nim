@@ -5,7 +5,6 @@ import algorithm
 
 import config
 import timer
-import dip
 
 type
   CI*[T:SomeFloat] = object
