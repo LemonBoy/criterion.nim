@@ -12,7 +12,6 @@ iterator geometricProgression(base: int, N: int): int =
   var t: int
   while true:
     t = v.int
-    # echo "t = ", t
     yield t
     while v.int == t: v *= 1.05
 

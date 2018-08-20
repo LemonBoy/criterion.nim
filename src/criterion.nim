@@ -1,7 +1,8 @@
-include criterion/impl
-include criterion/sugar
-# include criterion/display
+import criterion/config
+import criterion/impl
+import criterion/sugar
 
-export newDefaultConfig
 export benchmark
-export toShow
+export measure
+export measureArgs
+export newDefaultConfig

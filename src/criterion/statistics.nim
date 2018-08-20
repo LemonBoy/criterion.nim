@@ -15,7 +15,6 @@ type
   Statistics* = object
     label*: string
     samples*: seq[float64]
-    mvalue*: float64
     mean*: CI[float64]
     stddev*: CI[float64]
     slope*: CI[float64]
@@ -95,48 +94,6 @@ iterator linspace[T](a,b: T, points: Positive = 1): T =
     yield x
     x += step
 
-const
-  oneOverSqrtTwoPi = (1.0 / sqrt(2.0 * PI)).float64
-
-proc gaussian[T:SomeFloat](x: T): float64 =
-  oneOverSqrtTwoPi * exp(- 0.5 * pow(x, 2.0))
-
-proc silverman(y: openArray[float64], std, iqr: float64): float64 =
-  assert std != 0.0
-  0.9 * min(std, iqr / 1.349) * pow(y.len.float64, -0.2)
-  # std * pow(4.0 / 3.0 / y.len.float64, 0.2)
-
-proc kde(y: openArray[float64], h: float64, points: Positive): (seq[float64], seq[float64]) =
-  let lo = min(y) - 3.0 * h
-  let hi = max(y) + 3.0 * h
-
-  var xs = newSeq[float64](points)
-  var p = newSeq[float64](points)
-
-  var i = 0
-  for x in linspace(lo, hi, points - 1):
-    xs[i] = x
-    p[i] = y.foldl(a + gaussian((b - x) / h), 0.0) / (y.len.float64 * h)
-    inc i
-
-  result = (xs, p)
-
-proc mvalue(y: openArray[float64]): float64 =
-  # result = y[0] + abs(y[^1])
-  for i in 1..y.high: result += abs(y[i] - y[i - 1])
-  result /= max(y)
-
-template mapIt*(s, op: untyped): untyped =
-  type outType = type((
-    block:
-      var it{.inject.}: type(items(s));
-      op))
-  var result: seq[outType]
-  result = @[]
-  for it {.inject.} in s:
-    result.add(op)
-  result
-
 proc newStatistics*(cfg: Config, label: string, iterations: seq[int], samples: seq[float64]): Statistics =
   result.label = label
   result.samples = newSeq[float64](samples.len)
@@ -147,8 +104,6 @@ proc newStatistics*(cfg: Config, label: string, iterations: seq[int], samples: s
     result.samples[i] = samples[i] / iterations[i].float64
 
   sort(result.samples, system.cmp[float64])
-
-  echo result.samples
 
   result.q25 = percentile(result.samples, 0.25)
   result.q75 = percentile(result.samples, 0.75)
@@ -185,23 +140,6 @@ proc newStatistics*(cfg: Config, label: string, iterations: seq[int], samples: s
   let iqr = result.q75 - result.q25
   let lowerBound = result.q25 - 1.5 * iqr
   let upperBound = result.q75 + 1.5 * iqr
-
-  let clean = result.samples.filterIt(it in lowerBound..upperBound)
-  let mz = clean.sum / clean.len.float64
-  let qz = sqrt(clean.foldl(a + pow(b - mz, 2.0), 0.0) / (clean.len.float64 - 1.0))
-  let o2 = percentile(clean, 0.25)
-  let o7 = percentile(clean, 0.75)
-
-  block:
-    let bandwidth = silverman(clean, qz, o7 - o2)
-    echo "Bandwidth ", bandwidth
-    let (xs, ys) = kde(clean, bandwidth, cfg.kdePoints)
-    block:
-      let f = open("kde.dat", fmWrite)
-      for i in 0..xs.high:
-        f.write($xs[i] & "\t" & $ys[i] & "\n")
-      f.close
-    result.mvalue = mvalue(ys)
 
   result.mean = mean
   result.stddev = stddev

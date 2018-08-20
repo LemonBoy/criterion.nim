@@ -1,55 +1,134 @@
+import sequtils
+import macros
+
 import impl
 import config
 import display
+import statistics
 
-import macros
+const
+  ELLIPSIZE_THRESHOLD = 15
 
-macro measureArgs*(args: typed, stmt: typed): typed {.used.} =
-  expectKind stmt, nnkProcDef
+proc ellipsize(s: string): string =
+  if s.len < ELLIPSIZE_THRESHOLD:
+    return s
+  result = s[0..5] & "..." & s[^6..^1]
 
-  # The first param is the return type of the procedure
-  if params(stmt).len != 2:
-    error("the procedure must accept a single argument", stmt)
+proc dissectType(t: NimNode): int =
+  let ty = getType(t)
+  case ty.typeKind():
+    of ntyProc:
+      result = dissectType(ty[^1])
+    of ntyArray:
+      result = dissectType(ty[1]) * dissectType(ty[2])
+    of ntyRange:
+      result = dissectType(ty[2])
+    of ntyInt:
+      result = 1
+    of ntyTuple:
+      result = ty.len - 1
+    of ntyEmpty:
+      result = 0
+    else:
+      doAssert false, "unhandled type in dissectType " & $ty.typeKind()
 
-  var isIterator = false
-
-  case getType(args).typeKind():
-  of ntyProc:
-    # Assume this is an iterator
-    isIterator = true
-  of ntyArray, ntySequence:
-    discard
+proc countArguments(n: NimNode, req, max: var int) =
+  case n.kind
+  of nnkIdentDefs:
+    # <ident1> ... <identN>, <type>, <default>
+    max += n.len - 2
+    if n[^1].kind == nnkEmpty:
+      req += n.len - 2
+  of nnkFormalParams:
+    # <return>, <args> ... <args>
+    for i in 1..<n.len:
+      countArguments(n[i], req, max)
   else:
-    # echo getType(args).typeKind()
-    error("invalid arguments", args)
+    doAssert false, "unhandled node kind " & $n.kind
+
+template returnsVoid(params: NimNode): bool =
+  params[0].kind == nnkEmpty or getType(params[0]).typeKind == ntyVoid
+
+macro measureArgs*(args: typed, stmt: typed): untyped {.used.} =
+  expectKind stmt, {nnkProcDef, nnkFuncDef}
+
+  let params = params(stmt)
+
+  var reqArgs, maxArgs = 0
+  countArguments(params, reqArgs, maxArgs)
+
+  if reqArgs != maxArgs:
+    error("procedures with default arguments are not supported")
 
   let procName = stmt.name
+  let procNameStr = newStrLitNode($procName & "/")
 
-  let forArg = if isIterator: newCall(args) else: args
-  let forVar = genSym(nskForVar)
+  let arg = genSym(nskForVar)
 
-  # XXX Using `$` is not so wise
-  result = newStmtList(stmt,
-    nnkForStmt.newTree(forVar, forArg,
-      newCall(ident("add"), ident("collectedVar"),
-        newCall(ident("bench"), ident("cfg"),
-          newCall(ident("&"), newStrLitNode(repr(procName) & "/"),
-            newCall(ident("$"), forVar)),
-          newProc(body = newCall(procName, forVar))))))
+  # Try to figure out if `args` returns a n-element tuple and pass'em all as
+  # distinct arguments
+  let typeCardinality = dissectType(args)
+
+  if typeCardinality != maxArgs:
+    error("expected " & $maxArgs & " argument(s) but got " & $typeCardinality)
+
+  var innerBody = newCall(procName)
+
+  case typeCardinality:
+  of 0:
+    discard
+  of 1:
+    innerBody.add(arg)
+  else:
+    for i in 0..<typeCardinality:
+      innerBody.add(newNimNode(nnkBracketExpr).add(arg, newIntLitNode(i)))
+
+  if not returnsVoid(params):
+    innerBody = newNimNode(nnkDiscardStmt).add(innerBody)
+
+  let arg0 = if getType(args).typeKind() == ntyProc:
+    newCall(args)
+  else:
+    args
+
+  # Workaround, if `bench` is used directly then the compiler gets confused
+  # between the same symbol (???)
+  let bench = bindSym"bench"
+  let ellipsize = bindSym"ellipsize"
+
+  result = quote do:
+    when not compiles((for _ in `arg0`: discard)):
+      {.error: "the argument must be an iterable object".}
+    else:
+      for `arg` in `arg0`:
+        collectedVar.add(`bench`(cfg, `procNameStr` & `ellipsize`($`arg`),
+          proc () = `innerBody`))
 
 macro measure*(stmt: typed): typed {.used.} =
-  expectKind stmt, nnkProcDef
+  expectKind stmt, {nnkProcDef, nnkFuncDef}
 
-  # The first param is the return type of the procedure
-  if params(stmt).len != 1:
-    error("the procedure must accept zero arguments", stmt)
+  let params = params(stmt)
+
+  var reqArgs, maxArgs = 0
+  countArguments(params, reqArgs, maxArgs)
+
+  if reqArgs != 0:
+    error("the procedure must accept zero arguments")
 
   let procName = stmt.name
+  let procNameStr = newStrLitNode($procName)
 
-  result = newStmtList(stmt,
-    newCall(ident("add"), ident("collectedVar"),
-      newCall(ident("bench"), ident("cfg"), toStrLit(procName),
-        newProc(body = newCall(procName)))))
+  let innerBody = if not returnsVoid(params):
+    newNimNode(nnkDiscardStmt).add(newCall(procName))
+  else:
+    newCall(procName)
+
+  # Workaround, if `bench` is used directly then the compiler gets confused
+  # between the same symbol (???)
+  let bench = bindSym"bench"
+
+  result = quote do:
+    collectedVar.add(`bench`(cfg, `procNameStr`, proc () = `innerBody`))
 
 template benchmark*(cfg: Config, body: untyped): untyped =
   var collected: seq[Statistics] = @[]

@@ -24,4 +24,3 @@ proc toShow*(st: Statistics) =
   echo "Std: " & formatConf(st.stddev, formatTime)
   echo "Slope: " & formatConf(st.slope, formatTime)
   echo "r^2: " & formatConf(st.rsquare, formatNum)
-  echo "Mvalue: " & $st.mvalue
