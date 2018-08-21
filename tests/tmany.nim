@@ -1,5 +1,8 @@
 import criterion
 
+type
+  Z = int
+
 let cfg = newDefaultConfig()
 
 benchmark cfg:
@@ -15,4 +18,14 @@ benchmark cfg:
 
 benchmark cfg:
   func foo(x:int,w:float): cint {.measureArgs: [(1,1.0),(2,2.0)].} =
+    discard
+  func foo(x:Z): cint {.measureArgs: [1.Z].} =
+    discard
+
+benchmark cfg:
+  type O = object
+    x: int
+  func dodo(x: O) {.measureArgs: [O(x:42)].} =
+    discard
+  func dodo(x: array[3,int]) {.measureArgs: [[1,2,3]].} =
     discard

@@ -18,9 +18,11 @@ proc formatTime(v: float64): string =
 proc formatConf[T](v: CI[T], fmt: proc(x: T): string): string =
   &"{v.value.fmt} ({v.lower.fmt} .. {v.upper.fmt})"
 
-proc toShow*(st: Statistics) =
-  echo "Results for: " & st.label
-  echo "Mean: " & formatConf(st.mean, formatTime)
-  echo "Std: " & formatConf(st.stddev, formatTime)
-  echo "Slope: " & formatConf(st.slope, formatTime)
-  echo "r^2: " & formatConf(st.rsquare, formatNum)
+proc toShow*(st: Statistics, brief: bool) =
+  if brief:
+    echo "Mean: " & formatTime(st.mean.value) & " ± " & formatTime(st.stddev)
+  else:
+    echo "Mean:  " & formatConf(st.mean, formatTime)
+    echo "Std:   " & formatConf(st.stddev, formatTime)
+    echo "Slope: " & formatConf(st.slope, formatTime)
+    echo "r^2:   " & formatConf(st.rsquare, formatNum)

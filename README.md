@@ -42,23 +42,37 @@ benchmark cfg:
 Gives the following output:
 
 ```
-Results for: fib5
-Mean: 633.0391ns (609.3131ns .. 656.0740ns)
-Std: 178.9518ns (158.7979ns .. 199.6843ns)
-Slope: 508.6990ns (506.8242ns .. 511.8218ns)
-r^2: 0.9998 (0.9995 .. 1.0000)
+Benchmark: fib5()
+Mean:  48.3079ns (45.1520ns .. 52.8269ns)
+Std:   33.3215ns (15.0746ns .. 53.0642ns)
+Slope: 32.0345ns (31.8805ns .. 32.2599ns)
+r^2:   0.9998 (0.9994 .. 1.0000)
 
-Results for: fibN/5
-Mean: 510.0214ns (507.4473ns .. 513.3158ns)
-Std: 23.7082ns (9.8628ns .. 37.0326ns)
-Slope: 507.3269ns (505.3856ns .. 509.8917ns)
-r^2: 0.9998 (0.9996 .. 0.9999)
+Benchmark: fibN(x = 5)
+Mean:  33.6282ns (32.5132ns .. 35.7919ns)
+Std:   13.5899ns (2.2646ns .. 23.0743ns)
+Slope: 32.1599ns (31.9847ns .. 32.3936ns)
+r^2:   0.9996 (0.9994 .. 0.9998)
 
-Results for: fibN1/5
-Mean: 510.3315ns (507.3686ns .. 514.0403ns)
-Std: 26.6482ns (12.6483ns .. 40.6832ns)
-Slope: 508.6465ns (505.4450ns .. 512.0704ns)
-r^2: 0.9997 (0.9996 .. 0.9999)
+Benchmark: fibN1(x = 5)
+Mean:  33.8858ns (32.7428ns .. 35.6385ns)
+Std:   13.7220ns (2.8405ns .. 23.2511ns)
+Slope: 32.6684ns (32.2661ns .. 33.2929ns)
+r^2:   0.9978 (0.9951 .. 0.9992)
+```
+
+A bit too much info? Just set `cfg.brief = true` and the results will be output
+in a condensed format:
+
+```
+Benchmark: fib5()
+Mean: 45.7193ns ± 31.5409ns
+
+Benchmark: fibN(x = 5)
+Mean: 33.3713ns ± 9.3118ns
+
+Benchmark: fibN1(x = 5)
+Mean: 33.6369ns ± 10.8619ns
 ```
 
 If you need to pass more than a single argument to your benchmark fixture just

@@ -20,7 +20,7 @@ type
     rsquare*: CI[float64]
     q25*, q75*: float64
 
-converter toOrdinal[T](v: CI[T]): T = v.value
+converter toOrdinal*[T](v: CI[T]): T = v.value
 
 iterator exceptOutliers(st: Statistics): float64 =
   let iqr = st.q75 - st.q25

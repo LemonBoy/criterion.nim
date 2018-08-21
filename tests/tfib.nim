@@ -1,9 +1,11 @@
 import criterion
 
-let cfg = newDefaultConfig()
+var cfg = newDefaultConfig()
+
+cfg.brief = true
 
 benchmark cfg:
-  proc fib(n: int): int =
+  func fib(n: int): int =
     case n
     of 0: 1
     of 1: 1
