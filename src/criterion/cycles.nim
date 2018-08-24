@@ -10,13 +10,13 @@ when defined(amd64):
         :
         : "memory"
       );""".}
-      result = float64((hi shl 32) or low)
+      result = ((hi shl 32) or low).float64
   else:
     proc rdtsc(): int64 {.importc: "__rdtsc", header: "<intrin.h>".}
     proc lfence() {.importc: "__mm_lfence", header: "<intrin.h>".}
 
     proc cycles1*(): float64 {.inline.} =
       lfence()
-      return rdtsc()
+      return rdtsc().float64
 else:
   {.error: "Cycle counting not implemented yet for this platform".}
