@@ -26,7 +26,7 @@ proc toShow*(title: string, st: Statistics, brief: bool) =
   styledWriteLine(stdout, styleBright, fgGreen, "Benchmark: ", resetStyle, title)
   if brief:
     echo "  Time: ", formatTime(st.mean.value) & " ± " & formatTime(st.stddev)
-    echo "  Cycles: ", formatCycles(st.cmean.value) & " ± " & formatTime(st.cstddev.value)
+    echo "  Cycles: ", formatCycles(st.cmean.value) & " ± " & formatCycles(st.cstddev.value)
   else:
     styledWriteLine(stdout, styleBright, fgBlue, "Time", resetStyle)
     echo "  Mean:  ", formatConf(st.mean, formatTime)

@@ -12,18 +12,19 @@ benchmark cfg:
     else: fib(n-1) + fib(n-2)
 
   proc fib5() {.measure.} =
-    discard fib(5)
+    var n = 15
+    doAssert fib(n) > 1
 
   # ... equivalent to ...
 
   iterator argFactory(): int =
-    for x in [5]:
+    for x in [15]:
       yield x
 
   proc fibN(x: int) {.measureArgs: argFactory.} =
-    discard fib(x)
+    doAssert fib(x) > 1
 
   # ... equivalent to ...
 
-  proc fibN1(x: int) {.measureArgs: [5].} =
-    discard fib(x)
+  proc fibN1(x: int) {.measureArgs: [15].} =
+    doAssert fib(x) > 1
