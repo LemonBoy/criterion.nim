@@ -7,14 +7,18 @@ let cfg = newDefaultConfig()
 
 benchmark cfg:
   proc foo(x, y: int) {.measureArgs: [(1,2)].} =
-    discard x + y
+    doAssert x + y == 1 + 2
+
+benchmark cfg:
+  proc foo(x: int) {.measureArgs: 0..10.} =
+    doAssert x >= 0 and x <= 10
 
 benchmark cfg:
   iterator bar(): (int, int) =
     yield (42, 42)
 
   proc foo(x, y: int) {.measureArgs: bar.} =
-    discard x + y
+    doAssert x + y == 42 + 42
 
 benchmark cfg:
   func foo(x:int,w:float): cint {.measureArgs: [(1,1.0),(2,2.0)].} =
@@ -26,6 +30,6 @@ benchmark cfg:
   type O = object
     x: int
   func dodo(x: O) {.measureArgs: [O(x:42)].} =
-    discard
+    doAssert x.x == 42
   func dodo(x: array[3,int]) {.measureArgs: [[1,2,3]].} =
-    discard
+    doAssert x.len == 3 and (x[0] + x[1] + x[2]) == 6

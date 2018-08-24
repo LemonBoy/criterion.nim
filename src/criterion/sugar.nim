@@ -28,15 +28,18 @@ proc ellipsize[T](obj: T): string =
 
     result = s[0..5] & "..." & s[^6..^1] & "[" & $s.len & "]"
 
-proc dissectType(t: NimNode): int =
+proc dissectType(t: NimNode): BiggestInt =
   let ty = getType(t)
   case ty.typeKind():
     of ntyProc:
       result = dissectType(ty[^1])
     of ntyArray:
-      result = dissectType(ty[1]) * dissectType(ty[2])
-    of ntyRange:
       result = dissectType(ty[2])
+    of ntyRange:
+      let epStart = ty[1]
+      let epEnd = ty[2]
+      doAssert epStart.kind == nnkIntLit and epEnd.kind == nnkIntLit
+      result = epEnd.intVal - epStart.intVal
     of ntyBool, ntyChar, ntyString, ntyInt..ntyUInt64, ntySet, ntyObject:
       result = 1
     of ntyTuple:
@@ -75,7 +78,7 @@ macro measureArgs*(args: typed, stmt: typed): untyped {.used.} =
   countArguments(params, reqArgs, maxArgs, argNames)
 
   if reqArgs != maxArgs:
-    error("procedures with default arguments are not supported")
+    error("procedures with default arguments are not supported", stmt)
 
   let procName = stmt.name
   let procNameStr = newStrLitNode($procName)
@@ -88,7 +91,7 @@ macro measureArgs*(args: typed, stmt: typed): untyped {.used.} =
   let typeCardinality = dissectType(args)
 
   if typeCardinality != maxArgs:
-    error("expected " & $maxArgs & " argument(s) but got " & $typeCardinality)
+    error("expected " & $maxArgs & " argument(s) but got " & $typeCardinality, stmt)
 
   var innerBody = newCall(procName)
   var collectArgsLoop = newStmtList()
@@ -104,7 +107,7 @@ macro measureArgs*(args: typed, stmt: typed): untyped {.used.} =
       newTree(nnkTupleConstr,
         newStrLitNode(argNames[0]), newCall(bindSym"ellipsize", arg))))
   else:
-    for i in 0..<typeCardinality:
+    for i in 0..<typeCardinality.int:
       let argN = newNimNode(nnkBracketExpr).add(arg, newIntLitNode(i))
       innerBody.add(argN)
       collectArgsLoop.add(newCall("add", argsVar,
@@ -143,7 +146,7 @@ macro measure*(stmt: typed): typed {.used.} =
   countArguments(params, reqArgs, maxArgs, argNames)
 
   if reqArgs != 0:
-    error("the procedure must accept zero arguments")
+    error("the procedure must accept zero arguments", stmt)
 
   let procName = stmt.name
   let procNameStr = newStrLitNode($procName)
