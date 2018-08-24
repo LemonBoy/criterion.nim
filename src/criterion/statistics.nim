@@ -17,22 +17,20 @@ type
     slope*: CI[float64]
     rsquare*: CI[float64]
 
+  Outliers* = tuple
+    extreme: int
+    mild: int
+
   Statistics* = object
     label*: string
     samples*: seq[float64]
     cycleSamples*: seq[float64]
     samplesEst*: Estimates
     cycleSamplesEst*: Estimates
+    outliers*: Outliers
+    cycleOutliers*: Outliers
 
 converter toOrdinal*[T](v: CI[T]): T = v.value
-
-# iterator exceptOutliers(st: Statistics): float64 =
-#   let iqr = st.q75 - st.q25
-#   let lowerBound = st.q25 - 1.5 * iqr
-#   let upperBound = st.q75 + 1.5 * iqr
-#   for val in st.samples:
-#     if val in lowerBound..upperBound:
-#       yield val
 
 proc percentile[T:SomeFloat](x: openArray[T], p: T): T =
   # The array _must_ be sorted
@@ -46,6 +44,20 @@ proc percentile[T:SomeFloat](x: openArray[T], p: T): T =
   assert idx.int < x.high
 
   result = x[idx.int] + (x[idx.int + 1] - x[idx.int]) * d
+
+proc classifyOutliers[T](x: openArray[T]): Outliers =
+  let q25 = percentile(x, 0.25)
+  let q75 = percentile(x, 0.75)
+  let iqr = q75 - q25
+  # Inner and outer fences
+  let (ifLow, ifUpp) = (q25 - 1.5 * iqr, q75 + 1.5 * iqr)
+  let (ofLow, ofUpp) = (q25 - 3.0 * iqr, q75 + 3.0 * iqr)
+  for val in x:
+    if val < ofLow or val > ofUpp: inc result.extreme
+    elif val < ifLow or val > ifUpp: inc result.mild
+
+proc isZero*(o: Outliers): bool =
+  o.mild + o.extreme == 0
 
 proc bootstrap[T,V](cfg: Config, rng: var Rand, y: openArray[V], fn: proc (y: openArray[V]): T): CI[float64] =
   var values = newSeq[T](cfg.resamples)
@@ -137,3 +149,6 @@ proc newStatistics*(cfg: Config, label: string, iterations: seq[int], samples, c
   # just do it now
   sort(normSamples, system.cmp[float64])
   sort(normCycleSamples, system.cmp[float64])
+
+  result.outliers = classifyOutliers(normSamples)
+  result.cycleOutliers = classifyOutliers(normCycleSamples)

@@ -11,6 +11,6 @@ proc newDefaultConfig*(): Config =
   result.budget = 5.0
   result.warmupBudget = 3.0
   result.resamples = 1_000
-  result.minSamples = 30
+  result.minSamples = 100
   result.brief = false
   result.verbose = false

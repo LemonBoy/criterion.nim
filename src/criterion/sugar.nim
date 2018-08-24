@@ -156,7 +156,6 @@ macro measure*(stmt: typed): typed {.used.} =
   # Workaround, if `bench` is used directly then the compiler gets confused
   # between the same symbol (???)
   let bench = bindSym"bench"
-  let dcfg = ident"cfg"
 
   result = quote do:
     let stats = `bench`(cfgLet, `procNameStr`, proc () = `innerBody`)
