@@ -12,7 +12,7 @@ when defined(windows):
   QueryPerformanceFrequency(frequency)
   let scaleFactor = NS_IN_S / frequency.float64
 
-  proc getMonotonicTime*(): float64 =
+  proc getMonotonicTime*(): float64 {.inline.} =
     var now: int64
     QueryPerformanceCounter(now)
     result = (now - base).float64 * scaleFactor
@@ -32,12 +32,12 @@ elif defined(macosx):
 
   let scaleFactor = timeBaseInfo.numer.float64 / timeBaseInfo.denom.float64
 
-  proc getMonotonicTime*(): float64 =
+  proc getMonotonicTime*(): float64 {.inline.} =
     return mach_absolute_time().float64 * scaleFactor
 elif defined(posix):
   import posix
 
-  proc getMonotonicTime*(): float64 =
+  proc getMonotonicTime*(): float64 {.inline.} =
     var spc: Timespec
     discard clock_gettime(CLOCK_MONOTONIC, spc)
     return spc.tv_sec.float64 * NS_IN_S + spc.tv_nsec.float64
