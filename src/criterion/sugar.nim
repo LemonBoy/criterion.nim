@@ -130,7 +130,7 @@ macro measureArgs*(args: typed, stmt: typed): untyped {.used.} =
       for `arg` in `arg0`:
         var `argsVar` = newSeqOfCap[(string, string)](`typeCardinality`)
         `collectArgsLoop`
-        let stats = `bench`(cfg, `procNameStr`, proc () = `innerBody`)
+        let stats = `bench`(cfgLet, `procNameStr`, proc () = `innerBody`)
         collectedVar.add((stats, `procNameStr`, `argsVar`))
 
 macro measure*(stmt: typed): typed {.used.} =
@@ -156,17 +156,20 @@ macro measure*(stmt: typed): typed {.used.} =
   # Workaround, if `bench` is used directly then the compiler gets confused
   # between the same symbol (???)
   let bench = bindSym"bench"
+  let dcfg = ident"cfg"
 
   result = quote do:
-    let stats = `bench`(cfg, `procNameStr`, proc () = `innerBody`)
+    let stats = `bench`(cfgLet, `procNameStr`, proc () = `innerBody`)
     collectedVar.add((stats, `procNameStr`, @[]))
 
-template benchmark*(cfg: Config, body: untyped): untyped =
-  var collected: seq[BenchmarkResult] = @[]
+template benchmark*(userCfg: Config, body: untyped): untyped =
+  var collected: seq[BenchmarkResult]
+  let cfg = userCfg
 
   # This template is only needed to let the macros access the instantiated
   # template variable
   template collectedVar(): untyped = collected
+  template cfgLet(): untyped = cfg
 
   # This is where the user-provided code is injected
   block:
