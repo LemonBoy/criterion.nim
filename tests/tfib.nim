@@ -2,7 +2,7 @@ import criterion
 
 var cfg = newDefaultConfig()
 
-cfg.brief = true
+# cfg.brief = true
 
 benchmark cfg:
   func fib(n: int): int =
@@ -12,13 +12,13 @@ benchmark cfg:
     else: fib(n-1) + fib(n-2)
 
   proc fib5() {.measure.} =
-    var n = 15
+    var n = 5
     doAssert fib(n) > 1
 
   # ... equivalent to ...
 
   iterator argFactory(): int =
-    for x in [15]:
+    for x in [5]:
       yield x
 
   proc fibN(x: int) {.measureArgs: argFactory.} =
@@ -26,5 +26,5 @@ benchmark cfg:
 
   # ... equivalent to ...
 
-  proc fibN1(x: int) {.measureArgs: [15].} =
+  proc fibN1(x: int) {.measureArgs: [5].} =
     doAssert fib(x) > 1

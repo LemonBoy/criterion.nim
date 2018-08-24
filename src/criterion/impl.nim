@@ -8,26 +8,38 @@ import timer
 import statistics
 import cycles
 
-iterator geometricProgression(base: int, N: int): int =
+iterator geometricProgression(base: int, N: float): int =
   var v = base.float
   var t: int
   while true:
     t = v.int
     yield t
-    while v.int == t: v *= 1.05
+    while v.int == t: v *= N
 
 proc bench*(cfg: Config, label: string, body: proc (): void): Statistics =
   let budget = NS_IN_S * cfg.budget.float64
-  var elapsed = 0.0'f64
+  let warmupBudget = NS_IN_S * cfg.warmupBudget.float64
+  var elapsed: float64
 
   var iters: seq[int]
   var times: seq[float64]
   var cycless: seq[float64]
 
-  for _ in 0..100:
+  var warmupIters = 0
+  elapsed = 0.0
+  # Warm up the caches
+  while elapsed < warmupBudget:
+    let rtBegin = getMonotonicTime()
     body()
+    let rtFinish = getMonotonicTime()
+    elapsed += rtFinish - rtBegin
+    inc warmupIters
 
-  for iterCount in geometricProgression(1, 2):
+  if cfg.verbose:
+    echo "Performed ", warmupIters, " warmup iterations"
+
+  elapsed = 0.0
+  for iterCount in geometricProgression(1, 1.05):
     GC_fullCollect()
 
     let rtBegin = getMonotonicTime()
@@ -48,7 +60,8 @@ proc bench*(cfg: Config, label: string, body: proc (): void): Statistics =
 
     # Make sure we collected enough samples to have meaningful results
     if elapsed >= budget and iters.len >= cfg.minSamples:
-      echo "Collected ", iters.len, " samples"
+      if cfg.verbose:
+        echo "Collected ", iters.len, " samples"
       break
 
   result = newStatistics(cfg, label, iters, times, cycless)

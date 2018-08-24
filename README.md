@@ -14,8 +14,6 @@ import criterion
 
 var cfg = newDefaultConfig()
 
-cfg.brief = true
-
 benchmark cfg:
   func fib(n: int): int =
     case n
@@ -24,13 +22,13 @@ benchmark cfg:
     else: fib(n-1) + fib(n-2)
 
   proc fib5() {.measure.} =
-    var n = 15
+    var n = 5
     doAssert fib(n) > 1
 
   # ... equivalent to ...
 
   iterator argFactory(): int =
-    for x in [15]:
+    for x in [5]:
       yield x
 
   proc fibN(x: int) {.measureArgs: argFactory.} =
@@ -38,7 +36,7 @@ benchmark cfg:
 
   # ... equivalent to ...
 
-  proc fibN1(x: int) {.measureArgs: [15].} =
+  proc fibN1(x: int) {.measureArgs: [5].} =
     doAssert fib(x) > 1
 ```
 
@@ -47,33 +45,33 @@ Gives the following (colored) output:
 ```
 Benchmark: fib5()
 Time
-  Mean:  2.8019us (2.7797us .. 2.8266us)
-  Std:   167.8612ns (106.8034ns .. 230.3764ns)
-  Slope: 2.7577us (2.7499us .. 2.7689us)
-  r^2:   0.9996 (0.9992 .. 0.9999)
+  Mean:  33.2897ns (31.7797ns .. 35.4315ns)
+  Std:   17.2337ns (3.0836ns .. 29.2159ns)
+  Slope: 30.9751ns (30.8246ns .. 31.1627ns)
+  r^2:   0.9997 (0.9993 .. 0.9999)
 Cycles
-  Mean:  960044cycles (952725cycles .. 968942cycles)
-  Std:   2249cycles (2198cycles .. 2306cycles)
+  Mean:  16160cycles (15857cycles .. 16589cycles)
+  Std:   26cycles (22cycles .. 30cycles)
 
-Benchmark: fibN(x = 15)
+Benchmark: fibN(x = 5)
 Time
-  Mean:  2.9217us (2.8829us .. 2.9595us)
-  Std:   264.9737ns (245.1058ns .. 289.2494ns)
-  Slope: 2.7671us (2.7423us .. 2.8032us)
-  r^2:   0.9985 (0.9973 .. 0.9993)
+  Mean:  33.0711ns (31.8598ns .. 35.0677ns)
+  Std:   13.4164ns (3.5756ns .. 22.2653ns)
+  Slope: 30.8647ns (30.7889ns .. 30.9487ns)
+  r^2:   0.9999 (0.9998 .. 1.0000)
 Cycles
-  Mean:  1001156cycles (987796cycles .. 1014500cycles)
-  Std:   2371cycles (2307cycles .. 2438cycles)
+  Mean:  16288cycles (15929cycles .. 16765cycles)
+  Std:   27cycles (23cycles .. 34cycles)
 
-Benchmark: fibN1(x = 15)
+Benchmark: fibN1(x = 5)
 Time
-  Mean:  2.7408us (2.7270us .. 2.7591us)
-  Std:   116.1330ns (29.1107ns .. 180.0350ns)
-  Slope: 2.7286us (2.7224us .. 2.7363us)
-  r^2:   0.9998 (0.9994 .. 1.0000)
+  Mean:  33.6754ns (32.4165ns .. 35.3637ns)
+  Std:   12.8452ns (4.2435ns .. 20.3009ns)
+  Slope: 32.3092ns (31.6511ns .. 33.3043ns)
+  r^2:   0.9960 (0.9919 .. 0.9989)
 Cycles
-  Mean:  944312cycles (939793cycles .. 950675cycles)
-  Std:   2191cycles (2159cycles .. 2236cycles)
+  Mean:  16505cycles (16178cycles .. 16946cycles)
+  Std:   27cycles (24cycles .. 32cycles)
 ```
 
 A bit too much info? Just set `cfg.brief = true` and the results will be output
@@ -81,16 +79,16 @@ in a condensed format:
 
 ```
 Benchmark: fib5()
-  Time: 3.2189us ± 911.1064ns
-  Cycles: 1108521cycles ± 3032cycles
+  Time: 33.8089ns ± 20.7207ns
+  Cycles: 16523cycles ± 33cycles
 
-Benchmark: fibN(x = 15)
-  Time: 2.7346us ± 80.7051ns
-  Cycles: 942230cycles ± 2182cycles
+Benchmark: fibN(x = 5)
+  Time: 33.9886ns ± 24.4268ns
+  Cycles: 16634cycles ± 38cycles
 
-Benchmark: fibN1(x = 15)
-  Time: 2.7298us ± 35.4231ns
-  Cycles: 940538cycles ± 2175cycles
+Benchmark: fibN1(x = 5)
+  Time: 33.8866ns ± 17.0953ns
+  Cycles: 16506cycles ± 29cycles
 ```
 
 Much easier to parse, isn't it?
