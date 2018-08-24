@@ -6,6 +6,7 @@ import sequtils
 import config
 import timer
 import statistics
+import cycles
 
 iterator geometricProgression(base: int, N: int): int =
   var v = base.float
@@ -21,6 +22,7 @@ proc bench*(cfg: Config, label: string, body: proc (): void): Statistics =
 
   var iters: seq[int]
   var times: seq[float64]
+  var cycless: seq[float64]
 
   for _ in 0..100:
     body()
@@ -29,15 +31,18 @@ proc bench*(cfg: Config, label: string, body: proc (): void): Statistics =
     GC_fullCollect()
 
     let rtBegin = getMonotonicTime()
+    let cyBegin = cycles1()
 
     for _ in 0..<iterCount:
       body()
 
+    let cyFinish = cycles1()
     let rtFinish = getMonotonicTime()
     let duration = rtFinish - rtBegin
 
     iters.add(iterCount)
     times.add(duration)
+    cycless.add(cyFinish - cyBegin)
 
     elapsed += duration
 
@@ -46,4 +51,4 @@ proc bench*(cfg: Config, label: string, body: proc (): void): Statistics =
       echo "Collected ", iters.len, " samples"
       break
 
-  result = newStatistics(cfg, label, iters, times)
+  result = newStatistics(cfg, label, iters, times, cycless)

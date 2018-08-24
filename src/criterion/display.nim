@@ -1,9 +1,13 @@
 import strformat
+import terminal
 
 import statistics
 
 proc formatNum(v: float64): string =
   &"{v:.4f}"
+
+proc formatCycles(v: float64): string =
+  &"{v.int64:d}cycles"
 
 proc formatTime(v: float64): string =
   let (unit, fact) =
@@ -18,11 +22,17 @@ proc formatTime(v: float64): string =
 proc formatConf[T](v: CI[T], fmt: proc(x: T): string): string =
   &"{v.value.fmt} ({v.lower.fmt} .. {v.upper.fmt})"
 
-proc toShow*(st: Statistics, brief: bool) =
+proc toShow*(title: string, st: Statistics, brief: bool) =
+  styledWriteLine(stdout, styleBright, fgGreen, "Benchmark: ", resetStyle, title)
   if brief:
-    echo "Mean: " & formatTime(st.mean.value) & " ± " & formatTime(st.stddev)
+    echo "  Time: ", formatTime(st.mean.value) & " ± " & formatTime(st.stddev)
+    echo "  Cycles: ", formatCycles(st.cmean.value) & " ± " & formatTime(st.cstddev.value)
   else:
-    echo "Mean:  " & formatConf(st.mean, formatTime)
-    echo "Std:   " & formatConf(st.stddev, formatTime)
-    echo "Slope: " & formatConf(st.slope, formatTime)
-    echo "r^2:   " & formatConf(st.rsquare, formatNum)
+    styledWriteLine(stdout, styleBright, fgBlue, "Time", resetStyle)
+    echo "  Mean:  ", formatConf(st.mean, formatTime)
+    echo "  Std:   ", formatConf(st.stddev, formatTime)
+    echo "  Slope: ", formatConf(st.slope, formatTime)
+    echo "  r^2:   ", formatConf(st.rsquare, formatNum)
+    styledWriteLine(stdout, styleBright, fgBlue, "Cycles", resetStyle)
+    echo "  Mean:  ", formatConf(st.cmean, formatCycles)
+    echo "  Std:   ", formatConf(st.cstddev, formatCycles)

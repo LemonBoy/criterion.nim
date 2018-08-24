@@ -175,6 +175,6 @@ template benchmark*(cfg: Config, body: untyped): untyped =
   # Once all the benchmarks have been run print the results
   for r in collected:
     let argsStr = "(" & join(r.params.mapIt(it[0] & " = " & it[1]), ", ") & ")"
-    echo "Benchmark: " & r.label & argsStr
-    toShow(r.stats, cfg.brief)
+    let title = r.label & argsStr
+    toShow(title, r.stats, cfg.brief)
     echo ""

@@ -19,6 +19,8 @@ type
     slope*: CI[float64]
     rsquare*: CI[float64]
     q25*, q75*: float64
+    cmean*: CI[float64]
+    cstddev*: CI[float64]
 
 converter toOrdinal*[T](v: CI[T]): T = v.value
 
@@ -93,7 +95,7 @@ iterator linspace[T](a,b: T, points: Positive = 1): T =
     yield x
     x += step
 
-proc newStatistics*(cfg: Config, label: string, iterations: seq[int], samples: seq[float64]): Statistics =
+proc newStatistics*(cfg: Config, label: string, iterations: seq[int], samples: seq[float64], cycleSamples: seq[float64]): Statistics =
   result.label = label
   result.samples = newSeq[float64](samples.len)
 
@@ -136,6 +138,14 @@ proc newStatistics*(cfg: Config, label: string, iterations: seq[int], samples: s
 
       result = 1 - (sRes / sTot))
 
+  let cmean = bootstrap(cfg, rng, iterations, cycleSamples,
+    proc (x: openArray[int], y: openArray[float64]): float64 =
+      (0..x.high).foldl(a + (y[b] / x[b].float64), 0.0))
+
+  let cstddev = bootstrap(cfg, rng, iterations, cycleSamples,
+    proc (x: openArray[int], y: openArray[float64]): float64 =
+      sqrt((0..x.high).foldl(a + pow((y[b] / x[b].float64) - mean, 2.0), 0.0) / (y.len.float64 - 1.0)))
+
   let iqr = result.q75 - result.q25
   let lowerBound = result.q25 - 1.5 * iqr
   let upperBound = result.q75 + 1.5 * iqr
@@ -144,3 +154,5 @@ proc newStatistics*(cfg: Config, label: string, iterations: seq[int], samples: s
   result.stddev = stddev
   result.slope = slope
   result.rsquare = rsquare
+  result.cmean = cmean
+  result.cstddev = cstddev
