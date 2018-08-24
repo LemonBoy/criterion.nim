@@ -176,5 +176,5 @@ template benchmark*(cfg: Config, body: untyped): untyped =
   for r in collected:
     let argsStr = "(" & join(r.params.mapIt(it[0] & " = " & it[1]), ", ") & ")"
     let title = r.label & argsStr
-    toShow(title, r.stats, cfg.brief)
+    toShow(cfg, title, r.stats)
     echo ""

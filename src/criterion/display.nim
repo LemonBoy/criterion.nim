@@ -2,6 +2,7 @@ import strformat
 import terminal
 
 import statistics
+import config
 
 proc formatNum(v: float64): string =
   &"{v:.4f}"
@@ -22,17 +23,26 @@ proc formatTime(v: float64): string =
 proc formatConf[T](v: CI[T], fmt: proc(x: T): string): string =
   &"{v.value.fmt} ({v.lower.fmt} .. {v.upper.fmt})"
 
-proc toShow*(title: string, st: Statistics, brief: bool) =
+proc toShow*(cfg: Config, title: string, st: Statistics) =
   styledWriteLine(stdout, styleBright, fgGreen, "Benchmark: ", resetStyle, title)
-  if brief:
-    echo "  Time: ", formatTime(st.mean.value) & " ± " & formatTime(st.stddev)
-    echo "  Cycles: ", formatCycles(st.cmean.value) & " ± " & formatCycles(st.cstddev.value)
+
+  if cfg.brief:
+    echo "  Time: ", formatTime(st.samplesEst.mean.value) & " ± " &
+      formatTime(st.samplesEst.stddev)
+    echo "  Cycles: ", formatCycles(st.cycleSamplesEst.mean.value) & " ± " &
+      formatCycles(st.cycleSamplesEst.stddev.value)
   else:
     styledWriteLine(stdout, styleBright, fgBlue, "Time", resetStyle)
-    echo "  Mean:  ", formatConf(st.mean, formatTime)
-    echo "  Std:   ", formatConf(st.stddev, formatTime)
-    echo "  Slope: ", formatConf(st.slope, formatTime)
-    echo "  r^2:   ", formatConf(st.rsquare, formatNum)
-    styledWriteLine(stdout, styleBright, fgBlue, "Cycles", resetStyle)
-    echo "  Mean:  ", formatConf(st.cmean, formatCycles)
-    echo "  Std:   ", formatConf(st.cstddev, formatCycles)
+    block:
+      let est = st.samplesEst
+      echo "  Mean:  ", formatConf(est.mean, formatTime)
+      echo "  Std:   ", formatConf(est.stddev, formatTime)
+      echo "  Slope: ", formatConf(est.slope, formatTime)
+      echo "  r^2:   ", formatConf(est.rsquare, formatNum)
+    block:
+      let est = st.cycleSamplesEst
+      styledWriteLine(stdout, styleBright, fgBlue, "Cycles", resetStyle)
+      echo "  Mean:  ", formatConf(est.mean, formatCycles)
+      echo "  Std:   ", formatConf(est.stddev, formatCycles)
+      echo "  Slope: ", formatConf(est.slope, formatCycles)
+      echo "  r^2:   ", formatConf(est.rsquare, formatNum)
