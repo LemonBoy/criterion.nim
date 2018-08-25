@@ -45,14 +45,14 @@ proc toShow*(cfg: Config, title: string, st: Statistics) =
     styledWriteLine(stdout, styleBright, fgBlue, "Time", resetStyle)
     block:
       let est = st.samplesEst
-      echo "  Mean:  ", formatConf(est.mean, formatTime)
-      echo "  Std:   ", formatConf(est.stddev, formatTime)
-      echo "  Slope: ", formatConf(est.slope, formatTime)
-      echo "  r^2:   ", formatConf(est.rsquare, formatNum)
+      echo "  Time: ", formatConf(est.slope, formatTime)
+      echo "  R²:   ", formatConf(est.rsquare, formatNum)
+      echo "  Mean: ", formatConf(est.mean, formatTime)
+      echo "  Std:  ", formatConf(est.stddev, formatTime)
     block:
       let est = st.cycleSamplesEst
       styledWriteLine(stdout, styleBright, fgBlue, "Cycles", resetStyle)
-      echo "  Mean:  ", formatConf(est.mean, formatCycles)
-      echo "  Std:   ", formatConf(est.stddev, formatCycles)
-      echo "  Slope: ", formatConf(est.slope, formatCycles)
-      echo "  r^2:   ", formatConf(est.rsquare, formatNum)
+      echo "  Cycles: ", formatConf(est.slope, formatCycles)
+      echo "  R²:     ", formatConf(est.rsquare, formatNum)
+      echo "  Mean:   ", formatConf(est.mean, formatCycles)
+      echo "  Std:    ", formatConf(est.stddev, formatCycles)
