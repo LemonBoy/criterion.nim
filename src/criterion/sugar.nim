@@ -35,12 +35,8 @@ proc dissectType(t: NimNode): BiggestInt =
       result = dissectType(ty[^1])
     of ntyArray:
       result = dissectType(ty[2])
-    of ntyRange:
-      let epStart = ty[1]
-      let epEnd = ty[2]
-      doAssert epStart.kind == nnkIntLit and epEnd.kind == nnkIntLit
-      result = epEnd.intVal - epStart.intVal
-    of ntyBool, ntyChar, ntyString, ntyInt..ntyUInt64, ntySet, ntyObject:
+    of ntyBool, ntyChar, ntyString, ntyCString, ntyInt..ntyUInt64, ntySet,
+      ntyObject:
       result = 1
     of ntyTuple:
       result = ty.len - 1
@@ -104,14 +100,14 @@ macro measureArgs*(args: typed, stmt: typed): untyped {.used.} =
     # Single argument only, pass as-is
     innerBody.add(arg)
     collectArgsLoop.add(newCall("add", argsVar,
-      newTree(nnkTupleConstr,
+      newTree(nnkPar,
         newStrLitNode(argNames[0]), newCall(bindSym"ellipsize", arg))))
   else:
     for i in 0..<typeCardinality.int:
       let argN = newNimNode(nnkBracketExpr).add(arg, newIntLitNode(i))
       innerBody.add(argN)
       collectArgsLoop.add(newCall("add", argsVar,
-        newTree(nnkTupleConstr,
+        newTree(nnkPar,
           newStrLitNode(argNames[i]), newCall(bindSym"ellipsize", argN))))
 
   if not returnsVoid(params):
@@ -165,7 +161,7 @@ macro measure*(stmt: typed): typed {.used.} =
     collectedVar.add((stats, `procNameStr`, @[]))
 
 template benchmark*(userCfg: Config, body: untyped): untyped =
-  var collected: seq[BenchmarkResult]
+  var collected: seq[BenchmarkResult] = @[]
   let cfg = userCfg
 
   # This template is only needed to let the macros access the instantiated

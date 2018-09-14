@@ -7,7 +7,7 @@ import config
 import timer
 
 type
-  CI*[T:SomeFloat] = object
+  CI*[T] = object
     value*: T
     lower*, upper*: T
 
@@ -32,7 +32,7 @@ type
 
 converter toOrdinal*[T](v: CI[T]): T = v.value
 
-proc percentile[T:SomeFloat](x: openArray[T], p: T): T =
+proc percentile[T](x: openArray[T], p: T): T =
   # The array _must_ be sorted
   # assert p >= 0 and p <= 1
   assert p in 0.T..1.T

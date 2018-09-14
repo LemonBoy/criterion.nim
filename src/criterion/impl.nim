@@ -21,9 +21,9 @@ proc bench*(cfg: Config, label: string, body: proc (): void): Statistics =
   let warmupBudget = NS_IN_S * cfg.warmupBudget.float64
   var elapsed: float64
 
-  var iters: seq[int]
-  var times: seq[float64]
-  var cycless: seq[float64]
+  var iters: seq[int] = @[]
+  var times: seq[float64] = @[]
+  var cycless: seq[float64] = @[]
 
   var warmupIters = 0
   elapsed = 0.0
