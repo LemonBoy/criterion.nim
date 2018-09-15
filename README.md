@@ -5,7 +5,7 @@ wonderful [criterion](https://github.com/bos/criterion) library for Haskell.
 
 ## Status
 
-Mostly working
+Works, API is still not 100% stable yet.
 
 ## Example
 
@@ -31,12 +31,12 @@ benchmark cfg:
     for x in [5]:
       yield x
 
-  proc fibN(x: int) {.measureArgs: argFactory.} =
+  proc fibN(x: int) {.measure: argFactory.} =
     doAssert fib(x) > 1
 
   # ... equivalent to ...
 
-  proc fibN1(x: int) {.measureArgs: [5].} =
+  proc fibN1(x: int) {.measure: [5].} =
     doAssert fib(x) > 1
 ```
 
@@ -126,6 +126,6 @@ import criterion
 let cfg = newDefaultConfig()
 
 benchmark cfg:
-  proc foo(x: int, y: float) {.measureArgs: [(1,1.0),(2,2.0)].} =
+  proc foo(x: int, y: float) {.measure: [(1,1.0),(2,2.0)].} =
     discard x.float + y
 ```
