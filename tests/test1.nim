@@ -10,5 +10,5 @@ benchmark cfg:
     yield repeat('a', 200)
     yield repeat('a', 2000)
 
-  proc fastSHA(input: string) {.measureArgs: strsrc.} =
+  proc fastSHA(input: string) {.measure: strsrc.} =
     discard secureHash(input)

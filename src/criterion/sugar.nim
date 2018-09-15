@@ -1,7 +1,6 @@
+import macros
 import sequtils
 import strutils
-import macros
-import typetraits
 
 import impl
 import config
@@ -64,118 +63,146 @@ proc countArguments(n: NimNode, req, max: var int, idents: var seq[string]) =
 template returnsVoid(params: NimNode): bool =
   params[0].kind == nnkEmpty or getType(params[0]).typeKind == ntyVoid
 
-macro measureArgs*(args: typed, stmt: typed): untyped {.used.} =
-  expectKind stmt, {nnkProcDef, nnkFuncDef}
+proc hasPragma(n: NimNode, id: string): NimNode =
+  for p in pragma(n):
+    if p.kind == nnkSym and eqIdent($p, id):
+      return p
+    elif p.kind == nnkExprColonExpr and eqIdent($p[0], id):
+      return p
+    else:
+      doAssert false
 
-  let params = params(stmt)
+proc arityMismatchError(n: NimNode, name: string, got, expected: BiggestInt) =
+  error("`" & name & "` expects " & $expected & " argument(s) but got " & $got, n)
+
+proc genFixture(cfg, accum, n, args: NimNode): NimNode =
+  ## Generates the benchmarking fixture for a given procedure ``n``.
+  expectKind n, {nnkProcDef, nnkFuncDef}
+
+  let procName = n.name
+  let procParams = n.params
 
   var reqArgs, maxArgs = 0
   var argNames: seq[string] = @[]
-  countArguments(params, reqArgs, maxArgs, argNames)
+  countArguments(procParams, reqArgs, maxArgs, argNames)
 
   if reqArgs != maxArgs:
-    error("procedures with default arguments are not supported", stmt)
+    error("Procedures with default arguments are not supported", n)
+  if not returnsVoid(procParams):
+    error("This procedure return type is not void", n)
 
-  let procName = stmt.name
   let procNameStr = newStrLitNode($procName)
 
-  let arg = genSym(nskForVar)
-  var argsVar = genSym(nskVar)
+  if args != nil:
+    # Try to figure out if `args` returns a n-element tuple and pass'em all as
+    # distinct arguments
+    let typeArity = dissectType(args)
 
-  # Try to figure out if `args` returns a n-element tuple and pass'em all as
-  # distinct arguments
-  let typeCardinality = dissectType(args)
+    if typeArity != maxArgs:
+      arityMismatchError(n, $procName, typeArity, maxArgs)
 
-  if typeCardinality != maxArgs:
-    error("expected " & $maxArgs & " argument(s) but got " & $typeCardinality, stmt)
+    var innerBody = newCall(procName)
+    let collectArgsLoop = newStmtList()
+    let arg = genSym(nskForVar)
+    var argsVar = genSym(nskVar)
 
-  var innerBody = newCall(procName)
-  var collectArgsLoop = newStmtList()
-
-  # Unpack `arg` if necessary and record the param <-> value assignment
-  case typeCardinality:
-  of 0:
-    discard
-  of 1:
-    # Single argument only, pass as-is
-    innerBody.add(arg)
-    collectArgsLoop.add(newCall("add", argsVar,
-      newTree(nnkPar,
-        newStrLitNode(argNames[0]), newCall(bindSym"ellipsize", arg))))
-  else:
-    for i in 0..<typeCardinality.int:
-      let argN = newNimNode(nnkBracketExpr).add(arg, newIntLitNode(i))
-      innerBody.add(argN)
+    # Unpack `arg` if necessary and record the param <-> value assignment
+    case typeArity:
+    of 0:
+      discard
+    of 1:
+      # Single argument only, pass as-is
+      innerBody.add(arg)
       collectArgsLoop.add(newCall("add", argsVar,
-        newTree(nnkPar,
-          newStrLitNode(argNames[i]), newCall(bindSym"ellipsize", argN))))
-
-  if not returnsVoid(params):
-    innerBody = newNimNode(nnkDiscardStmt).add(innerBody)
-
-  let arg0 = if getType(args).typeKind() == ntyProc:
-    newCall(args)
-  else:
-    args
-
-  # Workaround, if `bench` is used directly then the compiler gets confused
-  # between the same symbol (???)
-  let bench = bindSym"bench"
-
-  result = quote do:
-    when not compiles((for _ in `arg0`: discard)):
-      {.error: "the argument must be an iterable object".}
+        newPar(newStrLitNode(argNames[0]), newCall(bindSym"ellipsize", arg))))
     else:
-      for `arg` in `arg0`:
-        var `argsVar` = newSeqOfCap[(string, string)](`typeCardinality`)
-        `collectArgsLoop`
-        let stats = `bench`(cfgLet, `procNameStr`, proc () = `innerBody`)
-        collectedVar.add((stats, `procNameStr`, `argsVar`))
+      for i in 0..<typeArity.int:
+        let argN = newNimNode(nnkBracketExpr).add(arg, newIntLitNode(i))
+        innerBody.add(argN)
+        collectArgsLoop.add(newCall("add", argsVar,
+          newPar(newStrLitNode(argNames[i]), newCall(bindSym"ellipsize", argN))))
 
-macro measure*(stmt: typed): typed {.used.} =
-  expectKind stmt, {nnkProcDef, nnkFuncDef}
+    # If an iterator/proc name is passed we must wrap it in a call node
+    let iter = if getType(args).typeKind() == ntyProc:
+      newCall(args)
+    else:
+      args
 
-  let params = params(stmt)
-
-  var reqArgs, maxArgs = 0
-  var argNames: seq[string] = @[]
-  countArguments(params, reqArgs, maxArgs, argNames)
-
-  if reqArgs != 0:
-    error("the procedure must accept zero arguments", stmt)
-
-  let procName = stmt.name
-  let procNameStr = newStrLitNode($procName)
-
-  let innerBody = if not returnsVoid(params):
-    newNimNode(nnkDiscardStmt).add(newCall(procName))
+    result = quote do:
+      when not compiles((for _ in `iter`: discard)):
+        {.error: "The argument must be an iterable object".}
+      else:
+        for `arg` in `iter`:
+          var `argsVar` = newSeqOfCap[(string, string)](`typeArity`)
+          `collectArgsLoop`
+          `accum`.add ((
+            bench(`cfg`, `procNameStr`, proc () = `innerBody`),
+            `procNameStr`,
+            `argsVar`))
   else:
-    newCall(procName)
+    if maxArgs != 0:
+      arityMismatchError(n, $procName, 0, maxArgs)
 
-  # Workaround, if `bench` is used directly then the compiler gets confused
-  # between the same symbol (???)
-  let bench = bindSym"bench"
+    let innerBody = newCall(procName)
+    result = quote do:
+      `accum`.add ((
+        bench(`cfg`, `procNameStr`, proc () = `innerBody`),
+        `procNameStr`,
+        @[]))
 
-  result = quote do:
-    let stats = `bench`(cfgLet, `procNameStr`, proc () = `innerBody`)
-    collectedVar.add((stats, `procNameStr`, @[]))
+macro xbenchmark(userCfg: Config, body: typed): untyped =
+  result = newStmtList()
+  let localCfg = ident"_cfg"
+  let accum = ident"_accum"
 
-template benchmark*(userCfg: Config, body: untyped): untyped =
-  var collected: seq[BenchmarkResult] = @[]
-  let cfg = userCfg
+  result.add quote do:
+    let `localCfg` = `userCfg`
+    var `accum`: seq[BenchmarkResult] = @[]
 
-  # This template is only needed to let the macros access the instantiated
-  # template variable
-  template collectedVar(): untyped = collected
-  template cfgLet(): untyped = cfg
+  proc transform(dest, n: NimNode) =
+    ## Perform an almost-exact copy of ``n`` into ``dest`` but add the
+    ## benchmarking fixtures when needed
+    if n.kind == nnkStmtList:
+      let sl = newTree(nnkStmtList)
+      for s in n: transform(sl, s)
+      dest.add(sl)
+    elif n.kind == nnkBlockStmt:
+      let sl = newTree(nnkStmtList)
+      # The transformed contents are appended into a fresh nnkStmtList since the
+      # block body may not be one
+      transform(sl, n[1])
+      dest.add newBlockStmt(n[0], sl)
+    elif n.kind in {nnkProcDef, nnkFuncDef}:
+      dest.add n
 
-  # This is where the user-provided code is injected
-  block:
-    body
+      let pNode = hasPragma(n, "measure")
+      if pNode != nil:
+        if pNode.kind != nnkExprColonExpr:
+          dest.add genFixture(localCfg, accum, n, nil)
+        else:
+          dest.add genFixture(localCfg, accum, n, pNode[1])
+    else:
+      dest.add n
+
+  transform(result, body)
+
+  # echo result.treeRepr
 
   # Once all the benchmarks have been run print the results
-  for r in collected:
-    let argsStr = "(" & join(r.params.mapIt(it[0] & " = " & it[1]), ", ") & ")"
-    let title = r.label & argsStr
-    toShow(cfg, title, r.stats)
-    echo ""
+  result.add quote do:
+    for r in `accum`:
+      let argsStr = "(" & join(r.params.mapIt(it[0] & " = " & it[1]), ", ") & ")"
+      let title = r.label & argsStr
+      toShow(cfg, title, r.stats)
+      echo ""
+
+template benchmark*(userCfg: Config, body: untyped): untyped =
+  ## This template wraps the ``xbenchmark`` invocation that does the heavy
+  ## lifting. This is needed in order to give ``body`` its own scope.
+  block:
+    xbenchmark(userCfg):
+      body
+
+# Those two pragmas are recognized by the ``benchmark`` macro
+template measure*() {.pragma.}
+template measure*(_: typed) {.pragma.}

@@ -4,5 +4,4 @@ import criterion/sugar
 
 export benchmark
 export measure
-export measureArgs
 export newDefaultConfig

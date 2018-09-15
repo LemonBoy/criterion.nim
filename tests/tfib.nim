@@ -21,10 +21,10 @@ benchmark cfg:
     for x in [5]:
       yield x
 
-  proc fibN(x: int) {.measureArgs: argFactory.} =
+  proc fibN(x: int) {.measure: argFactory.} =
     doAssert fib(x) > 1
 
   # ... equivalent to ...
 
-  proc fibN1(x: int) {.measureArgs: [5].} =
+  proc fibN1(x: int) {.measure: [5].} =
     doAssert fib(x) > 1
