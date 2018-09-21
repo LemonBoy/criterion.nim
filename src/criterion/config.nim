@@ -6,6 +6,7 @@ type
     minSamples*: int
     brief*: bool
     verbose*: bool
+    outputPath*: string
 
 proc newDefaultConfig*(): Config =
   result.budget = 5.0

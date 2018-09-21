@@ -1,17 +1,15 @@
 import macros
 import sequtils
 import strutils
+import streams
 
 import impl
 import config
-import display
 import statistics
 
-type
-  BenchmarkResult = tuple
-    stats: Statistics
-    label: string
-    params: seq[(string, string)]
+import exporter
+import consoleExporter
+import jsonExporter
 
 const
   ELLIPSIZE_THRESHOLD = 15
@@ -154,10 +152,27 @@ macro xbenchmark(userCfg: Config, body: typed): untyped =
   result = newStmtList()
   let localCfg = ident"_cfg"
   let accum = ident"_accum"
+  let strm = ident"_strm"
 
   result.add quote do:
     let `localCfg` = `userCfg`
     var `accum`: seq[BenchmarkResult] = @[]
+    var `strm`: Stream = nil
+
+    # Open the ``strm`` stream here so we can catch and report any error in the
+    # user-supplied path before the time-consuming loop is reached
+    if `localCfg`.outputPath.len != 0:
+      var path: string
+      try:
+        path = `localCfg`.outputPath % []
+        `strm` = openFileStream(path, fmWrite)
+      except ValueError:
+        # The format string is not valid
+        echo "Invalid format string for 'outputPath': ", `localCfg`.outputPath
+        quit(1)
+      except IOError:
+        echo "Could not open the output file: ", path
+        quit(1)
 
   proc transform(dest, n: NimNode) =
     ## Perform an almost-exact copy of ``n`` into ``dest`` but add the
@@ -186,15 +201,18 @@ macro xbenchmark(userCfg: Config, body: typed): untyped =
 
   transform(result, body)
 
-  # echo result.treeRepr
-
   # Once all the benchmarks have been run print the results
   result.add quote do:
-    for r in `accum`:
-      let argsStr = "(" & join(r.params.mapIt(it[0] & " = " & it[1]), ", ") & ")"
-      let title = r.label & argsStr
-      toShow(cfg, title, r.stats)
-      echo ""
+    let strm = newFileStream(stdout)
+    toDisplay(cfg, strm, `accum`)
+    # Flush only, don't close stdout!
+    flush(strm)
+
+  # If requested dump everything into a json file
+  result.add quote do:
+    if `strm` != nil:
+      toJson(cfg, `strm`, `accum`)
+      close(`strm`)
 
 template benchmark*(userCfg: Config, body: untyped): untyped =
   ## This template wraps the ``xbenchmark`` invocation that does the heavy

@@ -25,6 +25,7 @@ type
     label*: string
     samples*: seq[float64]
     cycleSamples*: seq[float64]
+    iterations*: seq[int]
     samplesEst*: Estimates
     cycleSamplesEst*: Estimates
     outliers*: Outliers
@@ -139,8 +140,9 @@ proc newStatistics*(cfg: Config, label: string, iterations: seq[int], samples, c
 
   result = Statistics(
     label: label,
-    samples: normSamples,
-    cycleSamples: normCycleSamples,
+    samples: samples,
+    cycleSamples: cycleSamples,
+    iterations: iterations,
     samplesEst: newEstimates(cfg, iterations, samples, normSamples),
     cycleSamplesEst: newEstimates(cfg, iterations, cycleSamples, normCycleSamples)
   )

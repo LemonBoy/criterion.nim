@@ -3,6 +3,7 @@ import criterion
 var cfg = newDefaultConfig()
 
 # cfg.brief = true
+# cfg.outputPath = "tfib.json"
 
 benchmark cfg:
   func fib(n: int): int =
