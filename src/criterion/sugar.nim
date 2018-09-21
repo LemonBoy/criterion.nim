@@ -148,6 +148,17 @@ proc genFixture(cfg, accum, n, args: NimNode): NimNode =
         `procNameStr`,
         @[]))
 
+when not declared(openFileStream):
+  # openFileStream isn't available on stable despite what the documentation says
+  # so we replicate it here
+  proc openFileStream(filename: string, mode: FileMode = fmRead,
+    bufSize: int = -1): FileStream =
+    var f: File
+    if open(f, filename, mode, bufSize):
+      return newFileStream(f)
+    else:
+      raise newException(IOError, "cannot open file")
+
 macro xbenchmark(userCfg: Config, body: typed): untyped =
   result = newStmtList()
   let localCfg = ident"_cfg"
