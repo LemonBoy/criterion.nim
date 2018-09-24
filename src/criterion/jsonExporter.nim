@@ -11,10 +11,14 @@ proc `%`(p: ParamTuple): JsonNode =
 proc `%`(r: BenchmarkResult): JsonNode =
   %*{ "label": r.label
     , "parameters": r.params
-    , "data":
+    , "raw_data":
       { "iterations":   r.stats.iterations
-      , "time_series":  r.stats.samples
-      , "cycle_series": r.stats.cycleSamples
+      , "time":  r.stats.samples
+      , "cycles": r.stats.cycleSamples
+      }
+    , "estimates":
+      { "time": r.stats.samplesEst
+      , "cycles": r.stats.cycleSamplesEst
       }
     }
 

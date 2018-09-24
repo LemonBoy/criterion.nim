@@ -15,3 +15,4 @@ proc newDefaultConfig*(): Config =
   result.minSamples = 100
   result.brief = false
   result.verbose = false
+  result.outputPath = ""
