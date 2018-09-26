@@ -2,7 +2,7 @@
 
 version       = "0.1.0"
 author        = "LemonBoy"
-description   = "A new awesome nimble package"
+description   = "Statistic-driven microbenchmark framework"
 license       = "MIT"
 srcDir        = "src"
 
