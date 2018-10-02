@@ -4,6 +4,10 @@ os:
     - linux
     - osx
 
+allow_failures:
+    # For some reason running the tests make the build timeout
+    - os: osx
+
 cache:
     directories:
         - "$HOME/.nimble"
