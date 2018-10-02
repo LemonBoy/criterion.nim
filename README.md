@@ -131,3 +131,22 @@ benchmark cfg:
   proc foo(x: int, y: float) {.measure: [(1,1.0),(2,2.0)].} =
     discard x.float + y
 ```
+
+## Export the measurements
+
+If you need the measurement data in order to compare different benchmarks, to
+plot the results or to post-process them you can do so by adding a single line
+to your benchmark setup:
+
+```nim
+let cfg = newDefaultConfig()
+
+# Your usual config goes here...
+cfg.outputPath = "my_benchmark.json"
+
+benchmark(cfg):
+  # Your benchmark code goes here...
+```
+
+The data will be dumped once the block has been completed into a json file
+that's ready for consumption by other tools.
