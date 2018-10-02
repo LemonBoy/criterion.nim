@@ -21,9 +21,9 @@ elif defined(macosx):
     MachTimebaseInfoData {.pure, final,
         importc: "mach_timebase_info_data_t",
         header: "<mach/mach_time.h>".} = object
-      numer, denom: int32
+      numer, denom: uint32
 
-  proc mach_absolute_time(): int64 {.importc, header: "<mach/mach.h>".}
+  proc mach_absolute_time(): uint64 {.importc, header: "<mach/mach_time.h>".}
   proc mach_timebase_info(info: var MachTimebaseInfoData) {.importc,
     header: "<mach/mach_time.h>".}
 
