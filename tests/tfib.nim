@@ -13,8 +13,10 @@ benchmark cfg:
     else: fib(n-1) + fib(n-2)
 
   proc fib5() {.measure.} =
-    var n = 5
-    doAssert fib(n) > 1
+    # blackBox fib(5)
+    # var n = 5
+    var tmp = fib(5)
+    blackBox tmp
 
   # ... equivalent to ...
 
@@ -23,9 +25,11 @@ benchmark cfg:
       yield x
 
   proc fibN(x: int) {.measure: argFactory.} =
-    doAssert fib(x) > 1
+    var tmp = fib(x)
+    blackBox tmp
 
   # ... equivalent to ...
 
   proc fibN1(x: int) {.measure: [5].} =
-    doAssert fib(x) > 1
+    var tmp = fib(x)
+    blackBox tmp
