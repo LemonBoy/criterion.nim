@@ -10,6 +10,10 @@ benchmark cfg:
     doAssert x + y == 1 + 2
 
 benchmark cfg:
+  proc foo(x, y: int) {.measure: @[(1,2)].} =
+    doAssert x + y == 1 + 2
+
+benchmark cfg:
   proc foo(x: int) {.measure: 0..10.} =
     doAssert x >= 0 and x <= 10
 

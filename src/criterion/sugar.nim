@@ -32,9 +32,9 @@ proc dissectType(t: NimNode): BiggestInt =
     of ntyProc:
       # Get the return type
       result = dissectType(ty[^1])
-    of ntyArray:
+    of ntyArray, ntySequence:
       # Get the type of the contained values
-      result = dissectType(ty[2])
+      result = dissectType(ty[^1])
     of ntyTuple:
       result = ty.len - 1
     of ntyEmpty:
