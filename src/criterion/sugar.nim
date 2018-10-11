@@ -30,18 +30,17 @@ proc dissectType(t: NimNode): BiggestInt =
   let ty = getType(t)
   case ty.typeKind():
     of ntyProc:
+      # Get the return type
       result = dissectType(ty[^1])
     of ntyArray:
+      # Get the type of the contained values
       result = dissectType(ty[2])
-    of ntyBool, ntyChar, ntyString, ntyCString, ntyInt..ntyUInt64, ntySet,
-      ntyObject, ntySequence:
-      result = 1
     of ntyTuple:
       result = ty.len - 1
     of ntyEmpty:
       result = 0
     else:
-      doAssert false, "unhandled type in dissectType " & $ty.typeKind()
+      result = 1
 
 proc countArguments(n: NimNode, req, max: var int, idents: var seq[string]) =
   case n.kind
