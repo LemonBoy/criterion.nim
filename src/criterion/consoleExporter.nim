@@ -1,8 +1,10 @@
 import strformat
-import terminal
+import terminal except styledWriteLine
 import sequtils
 import strutils
 import streams
+import macros
+from os import existsEnv
 
 import exporter
 import statistics
@@ -27,6 +29,24 @@ proc formatTime(v: float64): string =
 
 proc formatConf[T](v: CI[T], fmt: proc(x: T): string): string =
   &"{v.value.fmt} ({v.lower.fmt} .. {v.upper.fmt})"
+
+macro boringWrite*(f: File, m: varargs[typed]): untyped =
+  ## Similar to termina.styledWrite but strip everything that's not a string.
+  result = newNimNode(nnkStmtList)
+
+  for arg in m:
+    if arg.kind in {nnkStrLit..nnkTripleStrLit} or
+      getTypeImpl(arg).typeKind in {ntyString}:
+      result.add(newCall(bindSym"write", f, arg))
+
+template styledWriteLine*(f: File, args: varargs[untyped]) =
+  ## Similar to terminal.styledWriteLine but don't show colors if not
+  ## needed/requested.
+  if isatty(f) and not existsEnv("NO_COLOR"):
+    styledWrite(f, args)
+  else:
+    boringWrite(f, args)
+  write(f, "\n")
 
 proc toDisplay*(cfg: Config, strm: Stream, r: BenchmarkResult) =
   let title = r.label & '(' &
