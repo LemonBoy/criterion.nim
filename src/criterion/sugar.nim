@@ -2,6 +2,7 @@ import macros
 import sequtils
 import strutils
 import streams
+import typetraits
 
 import impl
 import config
@@ -16,7 +17,7 @@ const
 
 proc ellipsize[T](obj: T): string =
   when T is object|tuple|array|seq:
-    return $T
+    return $obj.type
   else:
     var s = $obj
 
@@ -33,7 +34,7 @@ proc dissectType(t: NimNode): BiggestInt =
     of ntyArray:
       result = dissectType(ty[2])
     of ntyBool, ntyChar, ntyString, ntyCString, ntyInt..ntyUInt64, ntySet,
-      ntyObject:
+      ntyObject, ntySequence:
       result = 1
     of ntyTuple:
       result = ty.len - 1
