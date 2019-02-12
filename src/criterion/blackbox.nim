@@ -1,4 +1,4 @@
-proc inner(x: ptr char) {.codegenDecl: "$# $#(char const volatile *x)".} =
+proc inner(x: ptr char) {.codegenDecl: "$# $#(char const volatile *x)", inline.} =
   discard
 
 template blackBox*[T](x: var T) =

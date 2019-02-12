@@ -225,6 +225,9 @@ macro xbenchmark(userCfg: Config, body: typed): untyped =
       toJson(cfg, `strm`, `accum`)
       close(`strm`)
 
+  when defined(criterionDebugMacro):
+    echo repr result
+
 template benchmark*(userCfg: Config, body: untyped): untyped =
   ## This template wraps the ``xbenchmark`` invocation that does the heavy
   ## lifting. This is needed in order to give ``body`` its own scope.
