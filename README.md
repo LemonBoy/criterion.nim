@@ -25,7 +25,7 @@ benchmark cfg:
 
   proc fib5() {.measure.} =
     var n = 5
-    doAssert fib(n) > 1
+    blackBox fib(n)
 
   # ... equivalent to ...
 
@@ -34,12 +34,12 @@ benchmark cfg:
       yield x
 
   proc fibN(x: int) {.measure: argFactory.} =
-    doAssert fib(x) > 1
+    blackBox fib(x)
 
   # ... equivalent to ...
 
   proc fibN1(x: int) {.measure: [5].} =
-    doAssert fib(x) > 1
+    blackBox fib(x)
 ```
 
 Gives the following (colored) output:
